@@ -1,0 +1,16 @@
+fastapi~=0.115.9
+uvicorn
+streamlit~=1.44.1
+langchain~=0.3.21
+openai
+faiss-cpu
+tiktoken
+python-multipart
+pydantic~=2.10.6
+aiofiles
+
+requests~=2.32.3
+langchain-community~=0.3.20
+azure-core~=1.32.0
+python-dotenv~=0.21.0
+langchain-openai~=0.3.12
