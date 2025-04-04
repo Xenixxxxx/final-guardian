@@ -5,10 +5,15 @@ import shutil
 from chains.answer_evaluator import evaluate_answer
 from chains.doc_loader import load_and_split_document
 from chains.quiz_gen import generate_quiz_from_docs
+from config import llm
 from vectorstore.chroma import create_chroma_index, load_chroma_index
-from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
+from fastapi import FastAPI, UploadFile, File, Form, Request
+from langchain.tools import Tool
+from langchain.agents import AgentType, initialize_agent
+from fastapi.responses import JSONResponse
+from openai import RateLimitError
 
 app = FastAPI()
 
@@ -76,3 +81,57 @@ async def evaluate_all(payload: AnswerSet):
             "result": result
         })
     return {"results": results}
+
+
+def simple_retrieval(query: str):
+    print(f"Query: {query}")
+    retriever = load_chroma_index().as_retriever()
+    docs = retriever.invoke(query)
+    print(f"Retrieved {len(docs)} documents.")
+    text = "\n\n".join([doc.page_content for doc in docs])
+    print(f'length of text: {len(text)}')
+    return text[:500]  # due to token limit, only use the first 500 characters in this demo
+
+
+retrieval_tool = Tool.from_function(
+    name="noteguide_qa",
+    description="Use this tool to answer questions based on the uploaded study notes.",
+    func=simple_retrieval
+)
+
+quiz_tool = Tool.from_function(
+    name="quiz_generator",
+    description="Use this to generate test questions from the notes based on a given topic.",
+    func=lambda q: generate_quiz_from_docs(load_chroma_index().similarity_search(q, k=3), True).content,
+)
+
+tools = [retrieval_tool, quiz_tool]
+
+agent_executor = initialize_agent(
+    tools=tools,
+    llm=llm,
+    agent=AgentType.OPENAI_FUNCTIONS,
+    # memory=memory,
+    verbose=True,
+)
+
+
+@app.post("/chat")
+async def chat(request: Request):
+    data = await request.json()
+    user_input = data.get("message")
+    if not user_input:
+        return JSONResponse(status_code=400, content={"error": "Missing user input."})
+
+    try:
+        response = agent_executor.invoke(user_input)
+        print(f"Response: {response}")
+
+        if isinstance(response, dict) and "output" in response:
+            return {"response": response["output"]}
+        return {"response": response}
+    except RateLimitError as e:
+        return {"response": "Rate limit exceeded. Please wait and try again."}
+    except Exception as e:
+        print(f"Error: {e}")
+        return JSONResponse(status_code=500, content={"error": str(e)})

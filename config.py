@@ -3,8 +3,6 @@ import os
 import azure.identity
 from dotenv import load_dotenv
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
-from langchain.agents.agent_types import AgentType
-from langchain.agents import initialize_agent
 
 load_dotenv(override=True)
 
@@ -17,14 +15,6 @@ llm = AzureChatOpenAI(
     azure_deployment=os.environ["AZURE_OPENAI_DEPLOYMENT"],
     openai_api_version=os.environ["AZURE_OPENAI_VERSION"],
     azure_ad_token_provider=token_provider,
-)
-
-agent_executor = initialize_agent(
-    tools=[
-    ],
-    llm=llm,
-    agent=AgentType.OPENAI_FUNCTIONS,
-    verbose=True,
 )
 
 embedding = AzureOpenAIEmbeddings(
