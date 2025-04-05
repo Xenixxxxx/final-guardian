@@ -1,3 +1,4 @@
+import hashlib
 import re
 import os
 import shutil
@@ -25,18 +26,54 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+HASH_FILE = "temp/uploaded_hashes.txt"
+
+
+def compute_hash(text):
+    return hashlib.md5(text.encode("utf-8")).hexdigest()
+
+
+def load_uploaded_hashes():
+    if not os.path.exists(HASH_FILE):
+        return set()
+    with open(HASH_FILE, "r") as f:
+        return set(line.strip() for line in f.readlines())
+
+
+def save_uploaded_hashes(new_hashes: set):
+    with open(HASH_FILE, "a") as f:
+        for h in new_hashes:
+            f.write(h + "\n")
+
 
 @app.post("/upload")
-async def upload_file(file: UploadFile = File(...)):
-    file_location = f"temp/{file.filename}"
+async def upload(file: UploadFile = File(...)):
+    file_path = f"temp/{file.filename}"
     os.makedirs("temp", exist_ok=True)
-    with open(file_location, "wb") as f:
+    with open(file_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
 
-    docs = load_and_split_document(file_location)
-    create_chroma_index(docs)
+    documents = load_and_split_document(file_path)
 
-    return {"message": "File uploaded and processed successfully", "filename": file.filename}
+    uploaded_hashes = load_uploaded_hashes()
+    new_docs = []
+    new_hashes = set()
+
+    for doc in documents:
+        hash_ = compute_hash(doc.page_content)
+        if hash_ not in uploaded_hashes:
+            doc.metadata["hash"] = hash_
+            new_docs.append(doc)
+            new_hashes.add(hash_)
+
+    if new_docs:
+        print(f"New documents to add: {len(new_docs)}")
+        create_chroma_index(new_docs)
+        save_uploaded_hashes(new_hashes)
+        return {"message": f"Uploaded successfully."}
+    else:
+        print("All documents already exist. Skipped upload.")
+        return {"message": "All content already exists in database."}
 
 
 @app.post("/generate-quiz")
