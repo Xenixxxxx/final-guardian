@@ -8,7 +8,7 @@ API_BASE = os.getenv("API_BASE", "http://localhost:8000")
 st.set_page_config(page_title="FinalGuardian", layout="centered")
 st.title("FinalGuardian - AI Quiz Trainer")
 
-tabs = st.tabs(["📝 Generate Quiz", "🧑‍🏫 Chat with Tutor"])
+tabs = st.tabs(["📝 Generate Quiz", "🧑‍🏫 Chat with Tutor", "🔧 Test Connection"])
 
 # ==== Generate Quiz ====
 with tabs[0]:
@@ -84,8 +84,9 @@ with tabs[0]:
             st.markdown(f"**{item['question']}**")
             # st.code(item['result']['content'], language="markdown")
             formatted_result = item['result']['content'].replace('\n', '<br>')
-            st.markdown(f"<div style='background-color:#f5f5f5;padding:10px;border-radius:6px'>{formatted_result}</div>",
-                        unsafe_allow_html=True)
+            st.markdown(
+                f"<div style='background-color:#f5f5f5;padding:10px;border-radius:6px'>{formatted_result}</div>",
+                unsafe_allow_html=True)
 
 # ==== Chat with Tutor ====
 with tabs[1]:
@@ -114,3 +115,13 @@ with tabs[1]:
                         reply = f"Error: {e}"
                     st.markdown(reply)
                     st.session_state.chat_history.append({"role": "assistant", "content": reply})
+
+# === Ping Backend Button for Connection Test ===
+with tabs[2]:
+    with st.expander("Connection Test", expanded=False):
+        if st.button("Ping Backend", help="Test connection to backend server"):
+            try:
+                response = requests.get(f"{API_BASE}/ping")
+                st.success(f"{response.json()['message']}")
+            except Exception as e:
+                st.error(f"Failed to connect: {e}")

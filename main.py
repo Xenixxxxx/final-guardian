@@ -28,6 +28,9 @@ app.add_middleware(
 
 HASH_FILE = "temp/uploaded_hashes.txt"
 
+@app.get("/ping")
+def ping():
+    return {"message": "pong"}
 
 def compute_hash(text):
     return hashlib.md5(text.encode("utf-8")).hexdigest()
