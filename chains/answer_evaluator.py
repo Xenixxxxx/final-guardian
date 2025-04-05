@@ -1,5 +1,5 @@
 from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
+
 from config import llm
 
 evaluation_prompt = PromptTemplate(

@@ -1,4 +1,5 @@
 from langchain.prompts import PromptTemplate
+
 from config import llm
 
 MAX_CONTEXT_LENGTH = 1000

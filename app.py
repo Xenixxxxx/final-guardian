@@ -1,13 +1,14 @@
 import os
+import requests
 
 import streamlit as st
-import requests
 
 API_BASE = os.getenv("API_BASE", "http://localhost:8000")
 print(f"Using API base: {API_BASE}")
 
 st.set_page_config(page_title="FinalGuardian", layout="centered")
-st.title("FinalGuardian - AI Quiz Trainer")
+st.title("FinalGuardian - Your AI Exam Preparation Companion")
+st.write("<span style='color:gray'>Welcome to FinalGuardian, your ultimate AI-powered tool to help you prepare for exams efficiently. Upload your study notes, generate quizzes, check you understanding and chat with an AI tutor.", unsafe_allow_html=True)
 
 tabs = st.tabs(["📝 Generate Quiz", "🧑‍🏫 Chat with Tutor", "🔧 Test Connection"])
 
@@ -26,18 +27,17 @@ with tabs[0]:
     if topic:
         if "quiz_submitted" not in st.session_state:
             st.session_state.quiz_submitted = False
-        if "disable_generate" not in st.session_state:
-            st.session_state.disable_generate = False
 
-        generate_button = st.button("Generate Quiz", disabled=st.session_state.disable_generate)
+        generate_button = st.button("Generate Quiz")
 
         if generate_button:
-            st.session_state.disable_generate = True
             with st.spinner("Generating quiz..."):
                 try:
                     res = requests.post(f"{API_BASE}/generate-quiz", data={"topic": topic})
                     if res.status_code == 429:
                         st.error("Too many requests. Please wait and try again.")
+                    elif res.status_code == 400:
+                        st.error("No notes found related to this keyword. Please upload your notes first.")
                     elif res.status_code != 200:
                         st.error(f"Server error: {res.text}")
                     else:
@@ -46,8 +46,6 @@ with tabs[0]:
                         st.session_state.user_answers = ["" for _ in st.session_state.questions]
                 except Exception as e:
                     st.error(f"Unexpected error: {e}")
-                finally:
-                    st.session_state.disable_generate = False
 
     # ---- Answer the questions ----
     if "questions" in st.session_state and st.session_state.questions:
@@ -83,7 +81,6 @@ with tabs[0]:
         st.header("Evaluation Results")
         for item in st.session_state.evaluation:
             st.markdown(f"**{item['question']}**")
-            # st.code(item['result']['content'], language="markdown")
             formatted_result = item['result']['content'].replace('\n', '<br>')
             st.markdown(
                 f"<div style='background-color:#f5f5f5;padding:10px;border-radius:6px'>{formatted_result}</div>",

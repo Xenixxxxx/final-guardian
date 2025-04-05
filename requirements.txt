@@ -8,12 +8,10 @@ tiktoken
 python-multipart
 pydantic~=2.10.6
 aiofiles
-
 requests~=2.32.3
 langchain-community~=0.3.20
 azure-core~=1.32.0
 python-dotenv~=0.21.0
 langchain-openai~=0.3.12
-azure-identity
 langchain-chroma
 pypdf

@@ -1,12 +1,9 @@
+import asyncio
 import hashlib
 import re
 import os
 import shutil
 
-from chains.answer_evaluator import evaluate_answer
-from chains.doc_loader import load_and_split_document
-from chains.quiz_gen import generate_quiz_from_docs
-from config import llm
 from vectorstore.chroma import create_chroma_index, load_chroma_index
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -15,6 +12,11 @@ from langchain.tools import Tool
 from langchain.agents import AgentType, initialize_agent
 from fastapi.responses import JSONResponse
 from openai import RateLimitError
+
+from chains.answer_evaluator import evaluate_answer
+from chains.doc_loader import load_and_split_document
+from chains.quiz_gen import generate_quiz_from_docs
+from config import llm
 
 app = FastAPI()
 
@@ -28,9 +30,11 @@ app.add_middleware(
 
 HASH_FILE = "temp/uploaded_hashes.txt"
 
+
 @app.get("/ping")
 def ping():
     return {"message": "pong"}
+
 
 def compute_hash(text):
     return hashlib.md5(text.encode("utf-8")).hexdigest()
@@ -83,6 +87,12 @@ async def upload(file: UploadFile = File(...)):
 async def generate_quiz(topic: str = Form(...)):
     index = load_chroma_index()
     docs = index.similarity_search(topic, k=10)
+
+    if not docs or all(not doc.page_content.strip() for doc in docs):
+        return JSONResponse(status_code=400, content={
+            "error": "No notes found related to this keyword. Please upload your notes first."
+        })
+
     quiz_response = generate_quiz_from_docs(docs)
     quiz_text = quiz_response.content if hasattr(quiz_response, "content") else quiz_response
 
@@ -113,13 +123,16 @@ class AnswerSet(BaseModel):
 
 @app.post("/evaluate-all")
 async def evaluate_all(payload: AnswerSet):
-    results = []
-    for item in payload.answers:
-        result = evaluate_answer(item.question, item.correct_answer, item.user_answer)
-        results.append({
-            "question": item.question,
-            "result": result
-        })
+    async def eval_one(item):
+        return await asyncio.to_thread(
+            lambda: {
+                "question": item.question,
+                "result": evaluate_answer(item.question, item.correct_answer, item.user_answer)
+            }
+        )
+
+    tasks = [eval_one(item) for item in payload.answers]
+    results = await asyncio.gather(*tasks)
     return {"results": results}
 
 

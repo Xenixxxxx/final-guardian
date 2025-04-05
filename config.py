@@ -1,6 +1,5 @@
 import os
 
-import azure.identity
 from dotenv import load_dotenv
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 
