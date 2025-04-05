@@ -4,6 +4,7 @@ import streamlit as st
 import requests
 
 API_BASE = os.getenv("API_BASE", "http://localhost:8000")
+print(f"Using API base: {API_BASE}")
 
 st.set_page_config(page_title="FinalGuardian", layout="centered")
 st.title("FinalGuardian - AI Quiz Trainer")
@@ -121,6 +122,7 @@ with tabs[2]:
     with st.expander("Connection Test", expanded=False):
         if st.button("Ping Backend", help="Test connection to backend server"):
             try:
+                st.write(f'Pinging {API_BASE}...')
                 response = requests.get(f"{API_BASE}/ping")
                 st.success(f"{response.json()['message']}")
             except Exception as e:
