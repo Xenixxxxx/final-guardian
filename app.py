@@ -1,16 +1,46 @@
+import json
 import os
+
 import requests
 
 import streamlit as st
+from streamlit_lottie import st_lottie
+from streamlit_lottie import st_lottie_spinner
 
 API_BASE = os.getenv("API_BASE", "http://localhost:8000")
 print(f"Using API base: {API_BASE}")
 
-st.set_page_config(page_title="FinalGuardian", layout="centered")
-st.title("FinalGuardian - Your AI Exam Preparation Companion")
-st.write("<span style='color:gray'>Welcome to FinalGuardian, your ultimate AI-powered tool to help you prepare for exams efficiently. Upload your study notes, generate quizzes, check you understanding and chat with an AI tutor.", unsafe_allow_html=True)
 
-tabs = st.tabs(["📝 Generate Quiz", "🧑‍🏫 Chat with Tutor", "🔧 Test Connection"])
+def load_lottie(filepath: str):
+    try:
+        with open(filepath, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"Failed to load Lottie file: {e}")
+        return None
+
+
+lottie_generating = load_lottie("assets/Animation - 1743834053019.json")
+lottie_exam = load_lottie("assets/Animation - 1743835691341.json")
+lottie_tutor = load_lottie("assets/Animation - 1743836610229.json")
+
+st.set_page_config(page_title="FinalGuardian", layout="centered", initial_sidebar_state="expanded")
+
+col1, col2 = st.columns([5, 1])
+
+with col1:
+    st.title("FinalGuardian - Your AI Exam Preparation Companion")
+
+with col2:
+    if lottie_exam:
+        st_lottie(lottie_exam, width=150, key="ai_intro")
+
+st.write(
+    "<span style='color:gray'>Welcome to FinalGuardian, your ultimate AI-powered tool to help you prepare for exams efficiently. Upload your study notes, generate quizzes, check you understanding and chat with an AI tutor.",
+    unsafe_allow_html=True)
+st.write(" ")
+
+tabs = st.tabs([" Generate Quiz   |", " Chat with Tutor   |", "Test Connection"])
 
 # ==== Generate Quiz ====
 with tabs[0]:
@@ -31,7 +61,7 @@ with tabs[0]:
         generate_button = st.button("Generate Quiz")
 
         if generate_button:
-            with st.spinner("Generating quiz..."):
+            with st_lottie_spinner(lottie_generating, key="generating", height=80):
                 try:
                     res = requests.post(f"{API_BASE}/generate-quiz", data={"topic": topic})
                     if res.status_code == 429:
@@ -73,7 +103,7 @@ with tabs[0]:
                     for i, q in enumerate(st.session_state.questions)
                 ]
             }
-            with st.spinner("Evaluating answers..."):
+            with st_lottie_spinner(lottie_generating, key="generating", height=80):
                 res = requests.post(f"{API_BASE}/evaluate-all", json=payload)
                 st.session_state.evaluation = res.json().get("results", [])
 
@@ -89,7 +119,9 @@ with tabs[0]:
 # ==== Chat with Tutor ====
 with tabs[1]:
     with tabs[1]:
-        st.header("🤖 Chat with your AI Tutor")
+        st.header("Chat with your AI Tutor")
+        if lottie_tutor:
+            st_lottie(lottie_tutor, width=250, key="tutor")
 
         if "chat_history" not in st.session_state:
             st.session_state.chat_history = []
