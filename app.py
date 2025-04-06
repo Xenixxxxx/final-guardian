@@ -156,3 +156,6 @@ with tabs[2]:
                 st.success(f"{response.json()['message']}")
             except Exception as e:
                 st.error(f"Failed to connect: {e}")
+
+st.write("---")
+st.markdown("[View this project on GitHub](https://github.com/Xenixxxxx/final-guardian)")
